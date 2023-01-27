@@ -10,11 +10,10 @@ dependencies:
   - anndata>=0.8.0
   - scanpy>=1.9.0
   - pytorch
-  - scvi-tools=0.17.4
   - torchvision
   - torchaudio
   - jax
   - jaxlib
   - pip
   - pip:
-      - huggingface_hub
+      - scvi-tools[hub]==0.20.0b1
