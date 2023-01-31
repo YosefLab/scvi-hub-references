@@ -1,0 +1,9 @@
+rule all:
+    log:
+        "logs/stderr.log",
+        "logs/stdout.log",
+    conda:
+        "envs/scrna_py.yaml"
+    threads: 16
+    script:
+        "scripts/process.py"

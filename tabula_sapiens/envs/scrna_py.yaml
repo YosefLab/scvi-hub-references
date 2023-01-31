@@ -15,7 +15,5 @@ dependencies:
   - jax
   - jaxlib
   - pip
-  - request
-  - urllib
   - pip:
       - scvi-tools[hub]==0.20.0b1
