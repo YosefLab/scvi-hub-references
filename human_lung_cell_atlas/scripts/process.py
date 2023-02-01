@@ -14,6 +14,7 @@ scvi.settings.seed = 0
 scvi.settings.reset_logging_handler()
 sys.stderr = open(snakemake.log[0], "w")  # noqa: F821
 sys.stdout = open(snakemake.log[1], "w")  # noqa: F821
+HF_TOKEN = snakemake.params["x"]
 
 tmpdir = tempfile.TemporaryDirectory()
 
@@ -109,6 +110,5 @@ hmch = HubModelCardHelper.from_dir(
 # create model
 hmo = HubModel(model_dir, metadata=hm, model_card=hmch)
 # push
-repo_token = "token" # TODO provide your token
-hmo.push_to_huggingface_hub(repo_name="scvi-tools/human-lung-cell-atlas", repo_token=repo_token, repo_create=True)
+hmo.push_to_huggingface_hub(repo_name="scvi-tools/human-lung-cell-atlas", repo_token=HF_TOKEN, repo_create=True)
 
