@@ -8,5 +8,7 @@ rule all:
     conda:
         "envs/scrna_py.yaml"
     threads: 16
+    params:
+        x=os.environ["HF_API_TOKEN"]
     script:
         "scripts/process.py"
