@@ -7,7 +7,8 @@ First, intstall pre-commit from pip and run `pre-commit install` at the root of 
 To run the code, create a conda environment, install snakemake in this environment, then run the following command:
 
 ```
-snakemake --use-conda --cores all
+export HF_API_TOKEN=TOKEN_VAL
+snakemake --use-conda --cores all --envvars HF_API_TOKEN
 ```
 
 from the corresponding reference directory's workflow directory.
