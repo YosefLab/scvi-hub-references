@@ -14,6 +14,7 @@ dependencies:
   - torchaudio
   - jax
   - jaxlib
+  - pooch
   - pip
   - pip:
       - scvi-tools[hub]==0.20.0b1
