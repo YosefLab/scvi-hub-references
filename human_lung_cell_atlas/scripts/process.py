@@ -14,7 +14,7 @@ scvi.settings.seed = 0
 scvi.settings.reset_logging_handler()
 sys.stderr = open(snakemake.log[0], "w")  # noqa: F821
 sys.stdout = open(snakemake.log[1], "w")  # noqa: F821
-HF_TOKEN = snakemake.params["x"]
+HF_TOKEN = snakemake.params["hf_api_token"]
 
 tmpdir = tempfile.TemporaryDirectory()
 
