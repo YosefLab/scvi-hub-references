@@ -65,7 +65,7 @@ for model in model_keys:
         training_data_url=adata_download_path[tissue],
     )
     
-    if model in ['scVI', 'scANVI']:
+    if model in ['scvi', 'scanvi']:
         minified = True
     else:
         minified = False
