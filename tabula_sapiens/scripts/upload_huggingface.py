@@ -78,7 +78,7 @@ for model in model_keys:
         data_is_annotated=True,
         tissues = [tissue],
         training_data_url=adata_download_path[tissue],
-        training_code_url="https://github.com/tabula_sapiens/train_model.py",
+        training_code_url="https://github.com/scvi-hub-references/tabula_sapiens/train_model.py",
         description=desc,
         references=citation,
         data_modalities=["rna"],
