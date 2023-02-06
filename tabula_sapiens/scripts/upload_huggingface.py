@@ -66,7 +66,7 @@ for model in model_keys:
         minified = False
     
     hmch = HubModelCardHelper.from_dir(
-        f"{tissue}_pretrained_models/{model}",
+        f"{tissue}_pretrained_models_{model}",
         license_info="cc-by-4.0",
         anndata_version=anndata.__version__,
         data_is_minified=minified,
@@ -79,7 +79,7 @@ for model in model_keys:
         data_modalities=["rna"],
     )
     # create model
-    hmo = HubModel(f"{tissue}_pretrained_models/{model}", metadata=hm, model_card=hmch)
+    hmo = HubModel(f"{tissue}_pretrained_models_{model}", metadata=hm, model_card=hmch)
     # push
-    hmo.push_to_huggingface_hub(repo_name="scvi-tools/tabula-sapiens", repo_token=HF_TOKEN, repo_create=True)
+    hmo.push_to_huggingface_hub(repo_name=f"scvi-tools/tabula-sapiens_{tissue}_{model}", repo_token=HF_TOKEN, repo_create=True)
 
