@@ -25,8 +25,13 @@ tissue = snakemake.params["tissue"]
 retrain = snakemake.params["retrain"]
 tmpdir = tempfile.TemporaryDirectory()
 
-res = requests.get("https://zenodo.org/api/records/7580683")
-adata_download_path = {ind['key'][3:-14]:ind['links']['self'] for ind in res.json()['files']}
+res = requests.get("https://zenodo.org/api/records/7608635")
+adata_download_path = {
+    ind['key'][:-19]:ind['links']['self']
+    for ind in res.json()['files'] if '.h5ad' in ind['key']}
+model_download_path = {
+    ind['key'][:-25]:ind['links']['self']
+    for ind in res.json()['files'] if not '.h5ad' in ind['key']}
 
 if retrain:
     retrain_models(tissue=tissue, output_dir=tmpdir.name, model_keys=model_keys)
@@ -36,7 +41,7 @@ else:
     output_fn = f'{tmpdir.name}/TS_{tissue}.h5ad'
 
     # download the model
-    model_url = res[tissue]
+    model_url = model_download_path[tissue]
     unzipped = pooch.retrieve(
         url=model_url,
         fname=f"{tissue}_pretrained_models",
