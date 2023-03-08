@@ -136,3 +136,6 @@ local/
 
 # VSCode
 .vscode
+
+# Snakemake
+*/.snakemake
