@@ -1,14 +1,15 @@
 """Upload HLCA."""
-import anndata
+import gc
 import tempfile
-import snakemake
 from pathlib import Path
+
+import anndata
 import pooch
 import scvi
+import snakemake
 from scvi.data._download import _download
+from scvi.hub import HubMetadata, HubModel, HubModelCardHelper
 from scvi.model.base import ArchesMixin
-import gc
-from scvi.hub import HubMetadata, HubModelCardHelper, HubModel
 
 scvi.settings.seed = 0
 scvi.settings.reset_logging_handler()
@@ -36,8 +37,8 @@ scvi.model.SCANVI.convert_legacy_save(legacy_model_dir, new_model_dir)
 # download the dataset
 adata = scvi.data.cellxgene(
     "https://cellxgene.cziscience.com/e/066943a2-fdac-4b29-b348-40cede398e4e.cxg/",
-    filename = "adata.h5ad",
-    save_path= new_model_dir.parent,
+    filename="adata.h5ad",
+    save_path=new_model_dir.parent,
 )
 
 # do some minimal processing of the data so it's ready for use with the model
@@ -68,14 +69,20 @@ model.minify_adata()
 
 # save the model and minified adata
 # before we can do this we need to massage the adata so it's type are amenable to saving (str)
-model.adata.var.feature_name = model.adata.var.feature_name.cat.add_categories("Unknown")
-model.adata.var.feature_reference = model.adata.var.feature_reference.cat.add_categories("Unknown")
-model.adata.var.feature_biotype = model.adata.var.feature_biotype.cat.add_categories("Unknown")
+model.adata.var.feature_name = model.adata.var.feature_name.cat.add_categories(
+    "Unknown"
+)
+model.adata.var.feature_reference = (
+    model.adata.var.feature_reference.cat.add_categories("Unknown")
+)
+model.adata.var.feature_biotype = model.adata.var.feature_biotype.cat.add_categories(
+    "Unknown"
+)
 model.adata.var.fillna("Unknown", inplace=True)
-obj_cols = model.adata.var.select_dtypes(include='object').columns
+obj_cols = model.adata.var.select_dtypes(include="object").columns
 model.adata.var.loc[:, obj_cols] = model.adata.var.loc[:, obj_cols].astype("str")
 # now save
-model_dir = new_model_dir.parent / "HLCA_reference_model_new_minified",
+model_dir = (new_model_dir.parent / "HLCA_reference_model_new_minified",)
 model.save(
     model_dir,
     save_anndata=True,
@@ -85,14 +92,14 @@ model.save(
 # create metadata
 hm = HubMetadata.from_dir(
     model_dir,
-    anndata_version = anndata.__version__,
+    anndata_version=anndata.__version__,
     training_data_url="https://cellxgene.cziscience.com/e/066943a2-fdac-4b29-b348-40cede398e4e.cxg/",
 )
 # create model card
-citation = r"""An integrated cell atlas of the human lung in health and disease  
-L Sikkema, D Strobl, L Zappia, E Madissoon, NS Markov, L Zaragosi, M Ansari, M Arguel, L Apperloo, C Bécavin, M Berg, E Chichelnitskiy, M Chung, A Collin, ACA Gay, B Hooshiar Kashani, M Jain, T Kapellos, TM Kole, C Mayr, M von Papen, L Peter, C Ramírez-Suástegui, J Schniering, C Taylor, T Walzthoeni, C Xu, LT Bui, C de Donno, L Dony, M Guo, AJ Gutierrez, L Heumos, N Huang, I Ibarra, N Jackson, P Kadur Lakshminarasimha Murthy, M Lotfollahi, T Tabib, C Talavera-Lopez, K Travaglini, A Wilbrey-Clark, KB Worlock, M Yoshida, Lung Biological Network Consortium, T Desai, O Eickelberg, C Falk, N Kaminski, M Krasnow, R Lafyatis, M Nikolíc, J Powell, J Rajagopal, O Rozenblatt-Rosen, MA Seibold, D Sheppard, D Shepherd, SA Teichmann, A Tsankov, J Whitsett, Y Xu, NE Banovich, P Barbry, TE Duong, KB Meyer, JA Kropski, D Pe’er, HB Schiller, PR Tata, JL Schultze, AV Misharin, MC Nawijn, MD Luecken, F Theis  
+citation = r"""An integrated cell atlas of the human lung in health and disease
+L Sikkema, D Strobl, L Zappia, E Madissoon, NS Markov, L Zaragosi, M Ansari, M Arguel, L Apperloo, C Bécavin, M Berg, E Chichelnitskiy, M Chung, A Collin, ACA Gay, B Hooshiar Kashani, M Jain, T Kapellos, TM Kole, C Mayr, M von Papen, L Peter, C Ramírez-Suástegui, J Schniering, C Taylor, T Walzthoeni, C Xu, LT Bui, C de Donno, L Dony, M Guo, AJ Gutierrez, L Heumos, N Huang, I Ibarra, N Jackson, P Kadur Lakshminarasimha Murthy, M Lotfollahi, T Tabib, C Talavera-Lopez, K Travaglini, A Wilbrey-Clark, KB Worlock, M Yoshida, Lung Biological Network Consortium, T Desai, O Eickelberg, C Falk, N Kaminski, M Krasnow, R Lafyatis, M Nikolíc, J Powell, J Rajagopal, O Rozenblatt-Rosen, MA Seibold, D Sheppard, D Shepherd, SA Teichmann, A Tsankov, J Whitsett, Y Xu, NE Banovich, P Barbry, TE Duong, KB Meyer, JA Kropski, D Pe’er, HB Schiller, PR Tata, JL Schultze, AV Misharin, MC Nawijn, MD Luecken, F Theis
 bioRxiv 2022.03.10.483747; doi: https://doi.org/10.1101/2022.03.10.483747"""
-desc = r"""The first integrated, universal transcriptomic reference of the human lung on the single-cell level.  
+desc = r"""The first integrated, universal transcriptomic reference of the human lung on the single-cell level.
 For more details, see https://github.com/LungCellAtlas/HLCA."""
 hmch = HubModelCardHelper.from_dir(
     model_dir,
@@ -100,7 +107,7 @@ hmch = HubModelCardHelper.from_dir(
     anndata_version=anndata.__version__,
     data_is_minified=True,
     data_is_annotated=True,
-    tissues = ['nose', 'respiratory airway', 'lung parenchyma'],
+    tissues=["nose", "respiratory airway", "lung parenchyma"],
     training_data_url="https://cellxgene.cziscience.com/e/066943a2-fdac-4b29-b348-40cede398e4e.cxg/",
     training_code_url="https://github.com/LungCellAtlas/HLCA_reproducibility",
     description=desc,
@@ -110,5 +117,6 @@ hmch = HubModelCardHelper.from_dir(
 # create model
 hmo = HubModel(model_dir, metadata=hm, model_card=hmch)
 # push
-hmo.push_to_huggingface_hub(repo_name="scvi-tools/human-lung-cell-atlas", repo_token=HF_TOKEN, repo_create=True)
-
+hmo.push_to_huggingface_hub(
+    repo_name="scvi-tools/human-lung-cell-atlas", repo_token=HF_TOKEN, repo_create=True
+)
