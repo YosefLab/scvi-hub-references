@@ -1,0 +1,14 @@
+envvars:
+    "HF_API_TOKEN"
+
+rule all:
+    log:
+        "logs/stderr.log",
+        "logs/stdout.log",
+    conda:
+        "env.yaml"
+    threads: 16
+    params:
+        hf_api_token=os.environ["HF_API_TOKEN"]
+    script:
+        "main.py"
