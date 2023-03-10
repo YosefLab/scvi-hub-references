@@ -1,0 +1,21 @@
+envvars:
+    "HF_API_TOKEN"
+
+rule all:
+    log:
+        "logs/stderr.log",
+        "logs/stdout.log",
+    conda:
+        "envs/scrna_py.yaml"
+    threads: 8
+    params:
+        hf_api_token=os.environ["HF_API_TOKEN"]
+        tissues=['Bladder', 'Blood', 'Bone_Marrow', 'Eye',
+            'Fat', 'Heart', 'Intestine', 'Large_Intestine', 'Liver', 'Lung',
+            'Lymph_Node', 'Mammary', 'Muscle', 'Pancreas', 'Prostate', 'Salivary_Gland',
+            'Skin', 'Small_Intestine', 'Spleen', 'Thymus', 'Tongue',
+            'Trachea', 'Uterus', 'Vasculature']
+        model_keys = ['scvi', 'scanvi', 'condscvi', "stereoscope"]
+        retrain = False
+    script:
+        "scripts/upload_huggingface.py"
