@@ -39,7 +39,7 @@ def minify_model(
     latent_qzm_key: str = "X_latent_qzm",
     latent_qzv_key: str = "X_latent_qzv",
     save_dir: str = "lung_cancer_scanvi_minified"
-) -> scvi.model.SCANVI:
+) -> Tuple[scvi.model.SCANVI, str]:
     """Minify the model and save it to disk."""
     qzm, qzv = model.get_latent_representation(return_dist=True)
     model.adata.obsm[latent_qzm_key] = qzm
@@ -50,7 +50,7 @@ def minify_model(
     make_parents(model_out)
     model.save(model_out)
 
-    return model
+    return model, model_out
 
 
 def create_hub_model(model_dir: str):
@@ -62,15 +62,21 @@ def create_hub_model(model_dir: str):
         training_data_url="https://zenodo.org/record/7227571/files/core_atlas_scanvi_model.tar.gz",
     )
 
-    citation = r""""""
-    description = r""""""
+    citation = r"""High-resolution single-cell atlas reveals diversity and plasticity of 
+    tissue-resident neutrophils in non-small cell lung cancer. S Salcher, G Sturm, 
+    L Horvath, G Untergasser, C Kuempers, G Fotakis, E Panizzolo, A Martowicz, M Trebo, 
+    G Pall, G Gamerith, M Sykora, F Augustin, K Schmitz, F Finotello, D Rieder, S Perner,
+    S Sopper, D Wolf, A Pircher, Z Trajanoski. Cancer Cell.  2022; 40 (12): 1503-1520.e8. 
+    https://doi.org/10.1016/j.ccell.2022.10.008"""
+    description = r"""The single cell lung cancer atlas is a resource integrating more 
+    than 1.2 million cells from 309 patients across 29 datasets."""
     card = scvi.hub.HubModelCardHelper.from_dir(
         model_in,
         license_info="cc-by-4.0",
         anndata_version=ad.__version__,
         data_is_minified=True,
         data_is_annotated=True,
-        tissues=[],
+        tissues=["lung"],
         training_data_url="https://zenodo.org/record/7227571/files/core_atlas_scanvi_model.tar.gz",
         training_code_url="https://github.com/icbi-lab/luca",
         description=description,
@@ -95,6 +101,6 @@ def upload_hub_model(
 
 if __name__ == "__main__":
     model, adata = load_model_and_dataset()
-    model = minify_model(model)
-    hubmodel = create_hub_model(model)
+    model, model_dir = minify_model(model)
+    hubmodel = create_hub_model(model_dir)
     upload_hub_model(hubmodel)
