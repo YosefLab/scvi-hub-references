@@ -2,7 +2,6 @@ import json
 import os
 import pathlib
 from pathlib import Path
-from typing import Tuple
 
 import anndata as ad
 import pooch
@@ -11,6 +10,7 @@ import scvi
 from scvi.hub import HubMetadata, HubModel, HubModelCardHelper
 
 HF_API_TOKEN = os.environ["HF_API_TOKEN"]
+scvi.settings.seed = 2023
 
 
 def make_parents(*paths) -> None:
@@ -26,7 +26,7 @@ def load_config(config_path: str) -> dict:
     return config
 
 
-def load_model(config: dict) -> Tuple[scvi.model.SCANVI, ad.AnnData]:
+def load_model(config: dict) -> scvi.model.SCANVI:
     """Load the model and dataset."""
     model_url = config["model_url"]
     unzipped = pooch.retrieve(
@@ -41,11 +41,11 @@ def load_model(config: dict) -> Tuple[scvi.model.SCANVI, ad.AnnData]:
 
     adata = sc.read(adata_path)
     model = scvi.model.SCANVI.load(model_path, adata=adata)
-    
+
     return model
 
 
-def minify_model_and_save(model: scvi.model.SCANVI, config: dict):
+def minify_model_and_save(model: scvi.model.SCANVI, config: dict) -> None:
     """Minify the model and save it to disk."""
     latent_qzm_key = config["latent_qzm_key"]
     latent_qzv_key = config["latent_qzv_key"]
@@ -89,16 +89,20 @@ def create_hub_model(config: dict) -> HubModel:
     return HubModel(model_dir, metadata=metadata, model_card=card)
 
 
-def upload_hub_model(hubmodel: HubModel, repo_token: str, config: dict):
+def upload_hub_model(hubmodel: HubModel, repo_token: str, config: dict) -> None:
     """Upload the model to the HuggingFace Hub."""
     repo_name = config["repo_name"]
     try:
         hubmodel.push_to_huggingface_hub(
-            repo_name=repo_name, repo_token=repo_token, repo_create=True,
+            repo_name=repo_name,
+            repo_token=repo_token,
+            repo_create=True,
         )
-    except Exception as e:
+    except Exception:
         hubmodel.push_to_huggingface_hub(
-            repo_name=repo_name, repo_token=repo_token, repo_create=False,
+            repo_name=repo_name,
+            repo_token=repo_token,
+            repo_create=False,
         )
 
 
