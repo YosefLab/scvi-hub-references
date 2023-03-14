@@ -1,3 +1,4 @@
+import json
 import os
 import pathlib
 from pathlib import Path
@@ -7,12 +8,7 @@ import anndata as ad
 import pooch
 import scanpy as sc
 import scvi
-from scvi.hub import (
-    HubModel,
-    HubModelCardHelper,
-    HubMetadata,
-)
-
+from scvi.hub import HubMetadata, HubModel, HubModelCardHelper
 
 HF_API_TOKEN = os.environ["HF_API_TOKEN"]
 
@@ -23,89 +19,96 @@ def make_parents(*paths) -> None:
         pathlib.Path(p).parent.mkdir(parents=True, exist_ok=True)
 
 
-def load_model_and_dataset() -> Tuple[scvi.model.SCANVI, ad.AnnData]:
-    model_url = "https://zenodo.org/record/7227571/files/core_atlas_scanvi_model.tar.gz"
+def load_config(config_path: str) -> dict:
+    """Load a JSON configuration file as a Python dictionary."""
+    with open(config_path) as f:
+        config = json.load(f)
+    return config
+
+
+def load_model(config: dict) -> Tuple[scvi.model.SCANVI, ad.AnnData]:
+    """Load the model and dataset."""
+    model_url = config["model_url"]
     unzipped = pooch.retrieve(
         url=model_url,
-        fname="lung_cancer_scanvi",
-        known_hash="60d6c0ccbad89178a359b3bd2f2981638c86b260011d8bd1977c989fbbc5ad7e",
+        fname=config["model_fname"],
+        known_hash=config["known_hash"],
         processor=pooch.Untar(),
     )[0]
     base_path = Path(unzipped).parent
-    model_path = os.path.join(base_path, "full_atlas_hvg_integrated_scvi_scanvi_model")
-    adata_path = os.path.join(base_path, "full_atlas_hvg_integrated_scvi_integrated_scanvi.h5ad")
+    model_path = os.path.join(base_path, config["model_path"])
+    adata_path = os.path.join(base_path, config["adata_path"])
 
     adata = sc.read(adata_path)
     model = scvi.model.SCANVI.load(model_path, adata=adata)
     
-    return model, adata
+    return model
 
 
-def minify_model(
-    model: scvi.model.SCANVI,
-    latent_qzm_key: str = "X_latent_qzm",
-    latent_qzv_key: str = "X_latent_qzv",
-    save_dir: str = "lung_cancer_scanvi_minified"
-) -> Tuple[scvi.model.SCANVI, str]:
+def minify_model_and_save(model: scvi.model.SCANVI, config: dict):
     """Minify the model and save it to disk."""
+    latent_qzm_key = config["latent_qzm_key"]
+    latent_qzv_key = config["latent_qzv_key"]
+
     qzm, qzv = model.get_latent_representation(return_dist=True)
     model.adata.obsm[latent_qzm_key] = qzm
     model.adata.obsm[latent_qzv_key] = qzv
-    model.minify_adata(use_latent_qzm_key=latent_qzm_key, use_latent_qzv_key=latent_qzv_key)
+    model.minify_adata(
+        use_latent_qzm_key=latent_qzm_key, use_latent_qzv_key=latent_qzv_key
+    )
 
-    model_out = os.path.join("models", save_dir)
-    make_parents(model_out)
-    model.save(model_out, overwrite=True)
-
-    return model, model_out
+    model_dir = os.path.join("models", config["model_dir"])
+    make_parents(model_dir)
+    model.save(model_dir, overwrite=True)
 
 
-def create_hub_model(model_dir: str):
+def create_hub_model(config: dict) -> HubModel:
+    """Create a HubModel object."""
+    model_dir = os.path.join("models", config["model_dir"])
+
     metadata = HubMetadata.from_dir(
         model_dir,
         anndata_version=ad.__version__,
-        training_data_url="https://zenodo.org/record/7227571/files/core_atlas_scanvi_model.tar.gz",
+        training_data_url=config["training_data_url"],
     )
 
-    citation = r"""High-resolution single-cell atlas reveals diversity and plasticity of 
-    tissue-resident neutrophils in non-small cell lung cancer. S Salcher, G Sturm, 
-    L Horvath, G Untergasser, C Kuempers, G Fotakis, E Panizzolo, A Martowicz, M Trebo, 
-    G Pall, G Gamerith, M Sykora, F Augustin, K Schmitz, F Finotello, D Rieder, S Perner,
-    S Sopper, D Wolf, A Pircher, Z Trajanoski. Cancer Cell.  2022; 40 (12): 1503-1520.e8. 
-    https://doi.org/10.1016/j.ccell.2022.10.008"""
-    description = r"""The single cell lung cancer atlas is a resource integrating more 
-    than 1.2 million cells from 309 patients across 29 datasets."""
     card = HubModelCardHelper.from_dir(
         model_dir,
-        license_info="cc-by-4.0",
+        license_info=config["license_info"],
         anndata_version=ad.__version__,
         data_is_minified=True,
         data_is_annotated=True,
-        tissues=["lung"],
-        training_data_url="https://zenodo.org/record/7227571/files/core_atlas_scanvi_model.tar.gz",
-        training_code_url="https://github.com/icbi-lab/luca",
-        description=description,
-        references=citation,
+        tissues=config["tissues"],
+        training_data_url=config["training_data_url"],
+        training_code_url=config["training_code_url"],
+        description=config["description"],
+        references=config["citation"],
         data_modalities=["rna"],
     )
 
-    hubmodel = HubModel(model_dir, metadata=metadata, model_card=card)
-
-    return hubmodel
+    return HubModel(model_dir, metadata=metadata, model_card=card)
 
 
-def upload_hub_model(
-    hubmodel: HubModel,
-    repo_name: str = "scvi-tools/non_small_cell_lung_cancer",
-    repo_token: str = None,
-):
-    hubmodel.push_to_huggingface_hub(
-        repo_name=repo_name, repo_token=repo_token, repo_create=True,
-    )
+def upload_hub_model(hubmodel: HubModel, repo_token: str, config: dict):
+    """Upload the model to the HuggingFace Hub."""
+    repo_name = config["repo_name"]
+    try:
+        hubmodel.push_to_huggingface_hub(
+            repo_name=repo_name, repo_token=repo_token, repo_create=True,
+        )
+    except Exception as e:
+        hubmodel.push_to_huggingface_hub(
+            repo_name=repo_name, repo_token=repo_token, repo_create=False,
+        )
+
+
+def main():
+    config = load_config("config.json")
+    model = load_model(config)
+    minify_model_and_save(model, config)
+    hubmodel = create_hub_model(config)
+    upload_hub_model(hubmodel, HF_API_TOKEN, config)
 
 
 if __name__ == "__main__":
-    model, adata = load_model_and_dataset()
-    model, model_dir = minify_model(model)
-    hubmodel = create_hub_model(model_dir)
-    upload_hub_model(hubmodel, repo_token=HF_API_TOKEN)
+    main()
