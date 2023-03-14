@@ -138,5 +138,6 @@ local/
 .vscode
 
 # Snakemake
-*/.snakemake
+*/.snakemake/
 */data/
+*/models/
