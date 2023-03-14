@@ -140,3 +140,4 @@ local/
 # Snakemake
 */.snakemake/
 */data/
+*/models/

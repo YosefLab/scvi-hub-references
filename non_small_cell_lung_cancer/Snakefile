@@ -8,7 +8,5 @@ rule all:
     conda:
         "env.yaml"
     threads: 16
-    params:
-        hf_api_token=os.environ["HF_API_TOKEN"]
     script:
         "main.py"

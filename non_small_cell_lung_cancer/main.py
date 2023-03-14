@@ -1,4 +1,3 @@
-import json
 import os
 import pathlib
 from pathlib import Path
@@ -8,6 +7,14 @@ import anndata as ad
 import pooch
 import scanpy as sc
 import scvi
+from scvi.hub import (
+    HubModel,
+    HubModelCardHelper,
+    HubMetadata,
+)
+
+
+HF_API_TOKEN = os.environ["HF_API_TOKEN"]
 
 
 def make_parents(*paths) -> None:
@@ -48,16 +55,14 @@ def minify_model(
 
     model_out = os.path.join("models", save_dir)
     make_parents(model_out)
-    model.save(model_out)
+    model.save(model_out, overwrite=True)
 
     return model, model_out
 
 
 def create_hub_model(model_dir: str):
-    model_in = os.path.join("models", model_dir)
-
-    metadata = scvi.hub.HubMetadata.from_dir(
-        model_in,
+    metadata = HubMetadata.from_dir(
+        model_dir,
         anndata_version=ad.__version__,
         training_data_url="https://zenodo.org/record/7227571/files/core_atlas_scanvi_model.tar.gz",
     )
@@ -70,8 +75,8 @@ def create_hub_model(model_dir: str):
     https://doi.org/10.1016/j.ccell.2022.10.008"""
     description = r"""The single cell lung cancer atlas is a resource integrating more 
     than 1.2 million cells from 309 patients across 29 datasets."""
-    card = scvi.hub.HubModelCardHelper.from_dir(
-        model_in,
+    card = HubModelCardHelper.from_dir(
+        model_dir,
         license_info="cc-by-4.0",
         anndata_version=ad.__version__,
         data_is_minified=True,
@@ -84,14 +89,14 @@ def create_hub_model(model_dir: str):
         data_modalities=["rna"],
     )
 
-    hubmodel = scvi.hub.HubModel(model_in, metadata=metadata, model_card=card)
+    hubmodel = HubModel(model_dir, metadata=metadata, model_card=card)
 
     return hubmodel
 
 
 def upload_hub_model(
-    hubmodel: scvi.hub.HubModel,
-    repo_name: str = "non_small_cell_lung_cancer",
+    hubmodel: HubModel,
+    repo_name: str = "scvi-tools/non_small_cell_lung_cancer",
     repo_token: str = None,
 ):
     hubmodel.push_to_huggingface_hub(
@@ -103,4 +108,4 @@ if __name__ == "__main__":
     model, adata = load_model_and_dataset()
     model, model_dir = minify_model(model)
     hubmodel = create_hub_model(model_dir)
-    upload_hub_model(hubmodel)
+    upload_hub_model(hubmodel, repo_token=HF_API_TOKEN)
