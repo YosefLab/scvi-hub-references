@@ -29,12 +29,62 @@
     "Uterus",
     "Vasculature"
   ],
+  "retrain": false,
+  "retrain_adata_urls": "https://zenodo.org/api/records/7580683",
   "models": [
     "scvi",
     "scanvi",
     "condscvi",
     "stereoscope"
   ],
+  "model_kwargs": {
+    "scvi": {
+      "dropout_rate": 0.05,
+      "dispersion": "gene",
+      "n_layers": 3,
+      "n_latent": 20,
+      "gene_likelihood": "nb",
+      "use_batch_norm": "none",
+      "use_layer_norm": "both",
+      "encode_covariates": true
+    },
+    "scanvi": {
+      "unlabeled_category": "unknown"
+    },
+    "condscvi": {
+      "n_latent": 5,
+      "n_layers": 2,
+      "dropout_rate": 0.05,
+      "weight_obs": false
+    },
+    "stereoscope": {}
+  },
+  "train_kwargs": {
+    "scvi": {
+      "max_epochs": 100,
+      "train_size": 1.0
+    },
+    "scanvi": {
+      "max_epochs": 20,
+      "n_samples_per_label": 20,
+      "train_size": 1.0,
+      "plan_kwargs": {
+        "n_epochs_kl_warmup": 10
+      }
+    },
+    "condscvi": {
+      "max_epochs": 200,
+      "train_size": 1.0
+    },
+    "stereoscope": {}
+  },
+  "hvg_kwargs": {
+    "n_top_genes": 4000,
+    "subset": true,
+    "flavor": "pearson_residuals"
+  },
+  "labels_key": "cell_ontology_class",
+  "batch_key": "donor_assay",
   "training_code_url": "https://github.com/scvi-hub-references/tabula_sapiens/main.py",
   "data_modalities": ["rna"],
   "license_info": "cc-by-4.0",

@@ -1,6 +1,7 @@
 import json
 import os
 import pathlib
+import sys
 import tempfile
 from pathlib import Path
 
@@ -12,6 +13,9 @@ from scvi.hub import HubMetadata, HubModel, HubModelCardHelper
 
 HF_API_TOKEN = os.environ["HF_API_TOKEN"]
 scvi.settings.seed = 2023
+scvi.settings.reset_logging_handler()
+sys.stderr = open(snakemake.log[0], "w")  # noqa: F821
+sys.stdout = open(snakemake.log[1], "w")  # noqa: F821
 
 
 def make_parents(*paths) -> None:
@@ -29,9 +33,8 @@ def load_config(config_path: str) -> dict:
 
 def load_model(savedir: tempfile.TemporaryDirectory, config: dict) -> scvi.model.SCANVI:
     """Load the model and dataset."""
-    model_url = config["model_url"]
     unzipped = pooch.retrieve(
-        url=model_url,
+        url=config["model_url"],
         fname=config["model_fname"],
         known_hash=config["known_hash"],
         processor=pooch.Untar(),
@@ -111,7 +114,7 @@ def upload_hub_model(hubmodel: HubModel, repo_token: str, config: dict) -> None:
 
 
 def main():
-    config = load_config("config.json")
+    config = load_config(snakemake.input[0])
     savedir = tempfile.TemporaryDirectory()
 
     model = load_model(savedir, config)
