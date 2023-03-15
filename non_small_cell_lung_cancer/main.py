@@ -31,7 +31,7 @@ def load_config(config_path: str) -> dict:
     return config
 
 
-def load_model(savedir: tempfile.TemporaryDirectory, config: dict) -> scvi.model.SCANVI:
+def load_model(savedir: str, config: dict) -> scvi.model.SCANVI:
     """Load the model and dataset."""
     unzipped = pooch.retrieve(
         url=config["model_url"],
@@ -51,7 +51,7 @@ def load_model(savedir: tempfile.TemporaryDirectory, config: dict) -> scvi.model
 
 
 def minify_model_and_save(
-    model: scvi.model.SCANVI, savedir: tempfile.TemporaryDirectory, config: dict
+    model: scvi.model.SCANVI, savedir: SystemError, config: dict
 ) -> None:
     """Minify the model and save it to disk."""
     latent_qzm_key = config["latent_qzm_key"]
@@ -64,14 +64,14 @@ def minify_model_and_save(
         use_latent_qzm_key=latent_qzm_key, use_latent_qzv_key=latent_qzv_key
     )
 
-    model_dir = os.path.join(savedir.name, config["model_dir"])
+    model_dir = os.path.join(savedir, config["model_dir"])
     make_parents(model_dir)
     model.save(model_dir, overwrite=True)
 
 
-def create_hub_model(savedir: tempfile.TemporaryDirectory, config: dict) -> HubModel:
+def create_hub_model(savedir: str, config: dict) -> HubModel:
     """Create a HubModel object."""
-    model_dir = os.path.join(savedir.name, config["model_dir"])
+    model_dir = os.path.join(savedir, config["model_dir"])
 
     metadata = HubMetadata.from_dir(
         model_dir,
@@ -115,7 +115,7 @@ def upload_hub_model(hubmodel: HubModel, repo_token: str, config: dict) -> None:
 
 def main():
     config = load_config(snakemake.input[0])
-    savedir = tempfile.TemporaryDirectory()
+    savedir = tempfile.TemporaryDirectory().name
 
     model = load_model(savedir, config)
     minify_model_and_save(model, savedir, config)

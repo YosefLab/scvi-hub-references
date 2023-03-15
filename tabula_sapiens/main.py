@@ -49,15 +49,13 @@ def get_urls(config: dict) -> Tuple[dict, dict]:
     return adata_urls, model_urls
 
 
-def load_models(
-    tissue: str, model_urls: dict, savedir: tempfile.TemporaryDirectory, config: dict
-):
+def load_models(tissue: str, model_urls: dict, savedir: str, config: dict):
     unzipped = pooch.retrieve(
         url=model_urls[tissue],
         fname=f"{config['model_fname']}_{tissue}",
         known_hash=config["known_hash"],
         processor=pooch.Untar(),
-        path=savedir.name,
+        path=savedir,
     )
     return Path(unzipped[0]).parent.parent
 
@@ -258,7 +256,7 @@ def main():
     retrain = config["retrain"]
     tissues = config["tissues"]
     models = config["models"]
-    savedir = tempfile.TemporaryDirectory()
+    savedir = tempfile.TemporaryDirectory().name
 
     adata_urls, model_urls = get_urls(config)
     if retrain:
