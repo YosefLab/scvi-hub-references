@@ -1,6 +1,7 @@
 import json
 import os
 import pathlib
+import tempfile
 from pathlib import Path
 
 import anndata as ad
@@ -26,7 +27,7 @@ def load_config(config_path: str) -> dict:
     return config
 
 
-def load_model(config: dict) -> scvi.model.SCANVI:
+def load_model(savedir: tempfile.TemporaryDirectory, config: dict) -> scvi.model.SCANVI:
     """Load the model and dataset."""
     model_url = config["model_url"]
     unzipped = pooch.retrieve(
@@ -34,6 +35,7 @@ def load_model(config: dict) -> scvi.model.SCANVI:
         fname=config["model_fname"],
         known_hash=config["known_hash"],
         processor=pooch.Untar(),
+        path=savedir.name
     )[0]
     base_path = Path(unzipped).parent
     model_path = os.path.join(base_path, config["model_path"])
@@ -45,7 +47,9 @@ def load_model(config: dict) -> scvi.model.SCANVI:
     return model
 
 
-def minify_model_and_save(model: scvi.model.SCANVI, config: dict) -> None:
+def minify_model_and_save(
+    model: scvi.model.SCANVI, savedir: tempfile.TemporaryDirectory, config: dict
+) -> None:
     """Minify the model and save it to disk."""
     latent_qzm_key = config["latent_qzm_key"]
     latent_qzv_key = config["latent_qzv_key"]
@@ -57,14 +61,14 @@ def minify_model_and_save(model: scvi.model.SCANVI, config: dict) -> None:
         use_latent_qzm_key=latent_qzm_key, use_latent_qzv_key=latent_qzv_key
     )
 
-    model_dir = os.path.join("models", config["model_dir"])
+    model_dir = os.path.join(savedir.name, config["model_dir"])
     make_parents(model_dir)
     model.save(model_dir, overwrite=True)
 
 
-def create_hub_model(config: dict) -> HubModel:
+def create_hub_model(savedir: tempfile.TemporaryDirectory, config: dict) -> HubModel:
     """Create a HubModel object."""
-    model_dir = os.path.join("models", config["model_dir"])
+    model_dir = os.path.join(savedir.name, config["model_dir"])
 
     metadata = HubMetadata.from_dir(
         model_dir,
@@ -83,7 +87,7 @@ def create_hub_model(config: dict) -> HubModel:
         training_code_url=config["training_code_url"],
         description=config["description"],
         references=config["citation"],
-        data_modalities=["rna"],
+        data_modalities=config["data_modalities"],
     )
 
     return HubModel(model_dir, metadata=metadata, model_card=card)
@@ -108,9 +112,11 @@ def upload_hub_model(hubmodel: HubModel, repo_token: str, config: dict) -> None:
 
 def main():
     config = load_config("config.json")
-    model = load_model(config)
-    minify_model_and_save(model, config)
-    hubmodel = create_hub_model(config)
+    savedir = tempfile.TemporaryDirectory()
+
+    model = load_model(savedir, config)
+    minify_model_and_save(model, savedir, config)
+    hubmodel = create_hub_model(savedir, config)
     upload_hub_model(hubmodel, HF_API_TOKEN, config)
 
 
