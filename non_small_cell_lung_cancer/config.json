@@ -1,5 +1,5 @@
 {
-    "model_url": "https: //zenodo.org/record/7227571/files/core_atlas_scanvi_model.tar.gz",
+    "model_url": "https://zenodo.org/record/7227571/files/core_atlas_scanvi_model.tar.gz",
     "known_hash": "60d6c0ccbad89178a359b3bd2f2981638c86b260011d8bd1977c989fbbc5ad7e", 
     "model_fname": "lung_cancer_scanvi",
     "model_path": "full_atlas_hvg_integrated_scvi_scanvi_model",
