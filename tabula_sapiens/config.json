@@ -31,12 +31,7 @@
   ],
   "retrain": false,
   "retrain_adata_urls": "https://zenodo.org/api/records/7580683",
-  "models": [
-    "scvi",
-    "scanvi",
-    "condscvi",
-    "stereoscope"
-  ],
+  "models": ["scvi", "scanvi", "condscvi", "stereoscope"],
   "model_kwargs": {
     "scvi": {
       "dropout_rate": 0.05,
