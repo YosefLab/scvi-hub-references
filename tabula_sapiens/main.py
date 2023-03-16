@@ -94,18 +94,18 @@ def create_hub_model(
 
 
 def upload_hub_model(
-    hubmodel: HubModel, tissue: str, model: str, repo_token: str, config: dict
+    hub_model: HubModel, tissue: str, model: str, repo_token: str, config: dict
 ):
     """Upload the model to the HuggingFace Hub."""
     repo_name = f"{config['repo_name']}-{tissue.lower()}-{model}"
     try:
-        hubmodel.push_to_huggingface_hub(
+        hub_model.push_to_huggingface_hub(
             repo_name=repo_name,
             repo_token=repo_token,
             repo_create=True,
         )
     except Exception:
-        hubmodel.push_to_huggingface_hub(
+        hub_model.push_to_huggingface_hub(
             repo_name=repo_name,
             repo_token=repo_token,
             repo_create=False,
@@ -266,8 +266,8 @@ def main():
 
         for model in models:
             try:
-                hubmodel = create_hub_model(tissue, model, adata_urls, models_dir, config)
-                upload_hub_model(hubmodel, tissue, model, HF_API_TOKEN, config)
+                hub_model = create_hub_model(tissue, model, adata_urls, models_dir, config)
+                upload_hub_model(hub_model, tissue, model, HF_API_TOKEN, config)
             except RuntimeError as e:
                 print(f"Error uploading {tissue} {model}: {e}")
 
