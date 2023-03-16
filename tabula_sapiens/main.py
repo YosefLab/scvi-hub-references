@@ -3,7 +3,6 @@ import os
 import pathlib
 import sys
 import tempfile
-import urllib
 from pathlib import Path
 from typing import Tuple
 
@@ -124,9 +123,7 @@ def get_retrain_urls(config: dict) -> dict:
 
 def load_adata(tissue: str, adata_urls: dict, savedir: str) -> ad.AnnData:
     adata_path = os.path.join(savedir, f"{tissue}.h5ad")
-    urllib.request.urlretrieve(adata_urls[tissue], adata_path)
-    
-    return sc.read(adata_path)
+    return sc.read(adata_path, backup_url=adata_urls[tissue])
 
 
 def preprocess_adata(adata: ad.AnnData, config: dict) -> ad.AnnData:
@@ -144,7 +141,7 @@ def retrain_scvi_and_minify(
     config: dict,
     latent_qzm_key: str = "X_scvi_qzm",
     latent_qzv_key: str = "X_scvi_qzv"
-) -> scvi.model.SCANVI:
+) -> scvi.model.SCVI:
     batch_key = config["batch_key"]
     labels_key = config["labels_key"]
     model_kwargs = config["model_kwargs"]
@@ -158,34 +155,34 @@ def retrain_scvi_and_minify(
         batch_key=batch_key,
         labels_key=labels_key,
     )
-    scvi = scvi.model.SCVI(adata, **scvi_model_kwargs)
-    scvi.train(**scvi_train_kwargs)
+    model = scvi.model.SCVI(adata, **scvi_model_kwargs)
+    model.train(**scvi_train_kwargs)
 
-    scanvi = scvi.model.SCANVI.from_scvi_model(scvi, **scanvi_model_kwargs)
-
-    qzm, qzv = scvi.get_latent_representation(give_mean=False, return_dist=True)
-    scvi.adata.obsm[latent_qzm_key] = qzm
-    scvi.adata.obsm[latent_qzv_key] = qzv
-    scvi.minify_adata(
+    qzm, qzv = model.get_latent_representation(give_mean=False, return_dist=True)
+    model.adata.obsm[latent_qzm_key] = qzm
+    model.adata.obsm[latent_qzv_key] = qzv
+    model.minify_adata(
         use_latent_qzm_key=latent_qzm_key, use_latent_qzv_key=latent_qzv_key
     )
 
     model_dir = os.path.join(savedir, "scvi")
     make_parents(model_dir)
-    scvi.save(model_dir, overwrite=True, save_anndata=True)
+    model.save(model_dir, overwrite=True, save_anndata=True)
 
-    return scanvi
+    return model
 
 
 def retrain_scanvi_and_minify(
-    model: scvi.model.SCANVI,
-    config: dict,
+    model: scvi.model.SCVI,
     savedir: str,
+    config: dict,
     latent_qzm_key: str = "X_scanvi_qzm",
     latent_qzv_key: str = "X_scanvi_qzv"
 ):
+    model_kwargs = config["model_kwargs"]["scanvi"]
     train_kwargs = config["train_kwargs"]["scanvi"]
 
+    model = scvi.model.SCANVI.from_scvi_model(model, **model_kwargs)
     model.train(**train_kwargs)
 
     qzm, qzv = model.get_latent_representation(give_mean=False, return_dist=True)
@@ -228,25 +225,22 @@ def retrain_stereoscope(adata: ad.AnnData, savedir: str, config: dict):
     model.save(model_dir, overwrite=True, save_anndata=True)
 
 
-def retrain_models(tissue: str, models: list, adata_urls: dict, savedir: str, config: dict) -> str:
-    adata = load_adata(tissue, adata_urls, savedir)
-    adata = preprocess_adata(adata, config)
-
+def retrain_models(adata: ad.AnnData, tissue: str, models: list, savedir: str, config: dict) -> str:
     models_dir = os.path.join(savedir, tissue)
     make_parents(models_dir)
 
-    scanvi = None
+    scvi_model = None
     if "scvi" in models:
-        scanvi = retrain_scvi_and_minify(adata, savedir, config)
+        scvi_model = retrain_scvi_and_minify(adata, models_dir, config)
     
-    if "scanvi" in models and scanvi is not None:
-        retrain_scanvi_and_minify(scanvi, config, savedir)
+    if "scanvi" in models and scvi_model is not None:
+        retrain_scanvi_and_minify(scvi_model, models_dir, config)
 
     if "condscvi" in models:
-        retrain_condscvi(adata, savedir, config)
+        retrain_condscvi(adata, models_dir, config)
 
     if "stereoscope" in models:
-        retrain_stereoscope(adata, savedir, config)
+        retrain_stereoscope(adata, models_dir, config)
 
     return models_dir
 
@@ -264,15 +258,18 @@ def main():
 
     for tissue in tissues:
         if retrain:
-            models_dir = retrain_models(
-                tissue, models, retrain_adata_urls, savedir, config
-            )
+            adata = load_adata(tissue, retrain_adata_urls, savedir)
+            adata = preprocess_adata(adata, config)
+            models_dir = retrain_models(adata, tissue, models, savedir, config)
         else:
             models_dir = load_models(tissue, model_urls, savedir, config)
 
         for model in models:
-            hubmodel = create_hub_model(tissue, model, adata_urls, models_dir, config)
-            upload_hub_model(hubmodel, tissue, model, HF_API_TOKEN, config)
+            try:
+                hubmodel = create_hub_model(tissue, model, adata_urls, models_dir, config)
+                upload_hub_model(hubmodel, tissue, model, HF_API_TOKEN, config)
+            except RuntimeError as e:
+                print(f"Error uploading {tissue} {model}: {e}")
 
 
 if __name__ == "__main__":
