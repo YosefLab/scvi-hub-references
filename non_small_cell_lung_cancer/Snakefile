@@ -2,6 +2,8 @@ envvars:
     "HF_API_TOKEN"
 
 rule all:
+    input:
+        "config.json"
     log:
         "logs/stderr.log",
         "logs/stdout.log",
