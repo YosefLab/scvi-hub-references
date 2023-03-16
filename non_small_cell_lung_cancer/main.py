@@ -1,8 +1,9 @@
 import json
 import os
 import pathlib
+import sys
+import tempfile
 from pathlib import Path
-from typing import Tuple
 
 import anndata as ad
 import pooch
@@ -11,6 +12,10 @@ import scvi
 from scvi.hub import HubMetadata, HubModel, HubModelCardHelper
 
 HF_API_TOKEN = os.environ["HF_API_TOKEN"]
+scvi.settings.seed = 2023
+scvi.settings.reset_logging_handler()
+sys.stderr = open(snakemake.log[0], "w")  # noqa: F821
+sys.stdout = open(snakemake.log[1], "w")  # noqa: F821
 
 
 def make_parents(*paths) -> None:
@@ -26,14 +31,14 @@ def load_config(config_path: str) -> dict:
     return config
 
 
-def load_model(config: dict) -> Tuple[scvi.model.SCANVI, ad.AnnData]:
+def load_model(savedir: str, config: dict) -> scvi.model.SCANVI:
     """Load the model and dataset."""
-    model_url = config["model_url"]
     unzipped = pooch.retrieve(
-        url=model_url,
+        url=config["model_url"],
         fname=config["model_fname"],
         known_hash=config["known_hash"],
         processor=pooch.Untar(),
+        path=savedir.name
     )[0]
     base_path = Path(unzipped).parent
     model_path = os.path.join(base_path, config["model_path"])
@@ -41,11 +46,13 @@ def load_model(config: dict) -> Tuple[scvi.model.SCANVI, ad.AnnData]:
 
     adata = sc.read(adata_path)
     model = scvi.model.SCANVI.load(model_path, adata=adata)
-    
+
     return model
 
 
-def minify_model_and_save(model: scvi.model.SCANVI, config: dict):
+def minify_model_and_save(
+    model: scvi.model.SCANVI, savedir: SystemError, config: dict
+) -> None:
     """Minify the model and save it to disk."""
     latent_qzm_key = config["latent_qzm_key"]
     latent_qzv_key = config["latent_qzv_key"]
@@ -57,14 +64,14 @@ def minify_model_and_save(model: scvi.model.SCANVI, config: dict):
         use_latent_qzm_key=latent_qzm_key, use_latent_qzv_key=latent_qzv_key
     )
 
-    model_dir = os.path.join("models", config["model_dir"])
+    model_dir = os.path.join(savedir, config["model_dir"])
     make_parents(model_dir)
     model.save(model_dir, overwrite=True)
 
 
-def create_hub_model(config: dict) -> HubModel:
+def create_hub_model(savedir: str, config: dict) -> HubModel:
     """Create a HubModel object."""
-    model_dir = os.path.join("models", config["model_dir"])
+    model_dir = os.path.join(savedir, config["model_dir"])
 
     metadata = HubMetadata.from_dir(
         model_dir,
@@ -83,30 +90,36 @@ def create_hub_model(config: dict) -> HubModel:
         training_code_url=config["training_code_url"],
         description=config["description"],
         references=config["citation"],
-        data_modalities=["rna"],
+        data_modalities=config["data_modalities"],
     )
 
     return HubModel(model_dir, metadata=metadata, model_card=card)
 
 
-def upload_hub_model(hubmodel: HubModel, repo_token: str, config: dict):
+def upload_hub_model(hubmodel: HubModel, repo_token: str, config: dict) -> None:
     """Upload the model to the HuggingFace Hub."""
     repo_name = config["repo_name"]
     try:
         hubmodel.push_to_huggingface_hub(
-            repo_name=repo_name, repo_token=repo_token, repo_create=True,
+            repo_name=repo_name,
+            repo_token=repo_token,
+            repo_create=True,
         )
-    except Exception as e:
+    except Exception:
         hubmodel.push_to_huggingface_hub(
-            repo_name=repo_name, repo_token=repo_token, repo_create=False,
+            repo_name=repo_name,
+            repo_token=repo_token,
+            repo_create=False,
         )
 
 
 def main():
-    config = load_config("config.json")
-    model = load_model(config)
-    minify_model_and_save(model, config)
-    hubmodel = create_hub_model(config)
+    config = load_config(snakemake.input[0])
+    savedir = tempfile.TemporaryDirectory().name
+
+    model = load_model(savedir, config)
+    minify_model_and_save(model, savedir, config)
+    hubmodel = create_hub_model(savedir, config)
     upload_hub_model(hubmodel, HF_API_TOKEN, config)
 
 
