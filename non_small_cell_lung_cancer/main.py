@@ -1,3 +1,4 @@
+"""Non-small cell lung cancer (NSCLC)."""
 import json
 import os
 import pathlib
@@ -35,14 +36,14 @@ def load_model(savedir: str, config: dict) -> scvi.model.SCANVI:
     """Load the model and dataset."""
     unzipped = pooch.retrieve(
         url=config["model_url"],
-        fname=config["model_fname"],
+        fname=config["model_save_dir"],
         known_hash=config["known_hash"],
         processor=pooch.Untar(),
-        path=savedir.name
+        path=savedir,
     )[0]
     base_path = Path(unzipped).parent
-    model_path = os.path.join(base_path, config["model_path"])
-    adata_path = os.path.join(base_path, config["adata_path"])
+    model_path = os.path.join(base_path, config["model_dir"])
+    adata_path = os.path.join(base_path, config["adata_fname"])
 
     adata = sc.read(adata_path)
     model = scvi.model.SCANVI.load(model_path, adata=adata)
@@ -51,32 +52,34 @@ def load_model(savedir: str, config: dict) -> scvi.model.SCANVI:
 
 
 def minify_model_and_save(
-    model: scvi.model.SCANVI, savedir: SystemError, config: dict
-) -> None:
+    model: scvi.model.SCANVI,
+    savedir: str,
+    config: dict,
+    latent_qzm_key: str = "latent_qzm",
+    latent_qzv_key: str = "latent_qzv",
+) -> str:
     """Minify the model and save it to disk."""
-    latent_qzm_key = config["latent_qzm_key"]
-    latent_qzv_key = config["latent_qzv_key"]
-
-    qzm, qzv = model.get_latent_representation(return_dist=True)
-    model.adata.obsm[latent_qzm_key] = qzm
-    model.adata.obsm[latent_qzv_key] = qzv
+    (
+        model.adata.obsm[latent_qzm_key],
+        model.adata.obsm[latent_qzv_key],
+    ) = model.get_latent_representation(give_mean=False, return_dist=True)
     model.minify_adata(
         use_latent_qzm_key=latent_qzm_key, use_latent_qzv_key=latent_qzv_key
     )
 
-    model_dir = os.path.join(savedir, config["model_dir"])
+    model_dir = os.path.join(savedir, config["minified_model_dir"])
     make_parents(model_dir)
     model.save(model_dir, overwrite=True)
 
+    return model_dir
 
-def create_hub_model(savedir: str, config: dict) -> HubModel:
+
+def create_hub_model(model_dir: str, config: dict) -> HubModel:
     """Create a HubModel object."""
-    model_dir = os.path.join(savedir, config["model_dir"])
-
     metadata = HubMetadata.from_dir(
         model_dir,
         anndata_version=ad.__version__,
-        training_data_url=config["training_data_url"],
+        training_data_url=config["model_url"],
     )
 
     card = HubModelCardHelper.from_dir(
@@ -86,7 +89,7 @@ def create_hub_model(savedir: str, config: dict) -> HubModel:
         data_is_minified=True,
         data_is_annotated=True,
         tissues=config["tissues"],
-        training_data_url=config["training_data_url"],
+        training_data_url=config["model_url"],
         training_code_url=config["training_code_url"],
         description=config["description"],
         references=config["citation"],
@@ -96,17 +99,17 @@ def create_hub_model(savedir: str, config: dict) -> HubModel:
     return HubModel(model_dir, metadata=metadata, model_card=card)
 
 
-def upload_hub_model(hubmodel: HubModel, repo_token: str, config: dict) -> None:
+def upload_hub_model(hub_model: HubModel, repo_token: str, config: dict):
     """Upload the model to the HuggingFace Hub."""
     repo_name = config["repo_name"]
     try:
-        hubmodel.push_to_huggingface_hub(
+        hub_model.push_to_huggingface_hub(
             repo_name=repo_name,
             repo_token=repo_token,
             repo_create=True,
         )
     except Exception:
-        hubmodel.push_to_huggingface_hub(
+        hub_model.push_to_huggingface_hub(
             repo_name=repo_name,
             repo_token=repo_token,
             repo_create=False,
@@ -114,13 +117,14 @@ def upload_hub_model(hubmodel: HubModel, repo_token: str, config: dict) -> None:
 
 
 def main():
-    config = load_config(snakemake.input[0])
+    """Run main."""
+    config = load_config(snakemake.input[0])  # noqa: F821
     savedir = tempfile.TemporaryDirectory().name
 
     model = load_model(savedir, config)
-    minify_model_and_save(model, savedir, config)
-    hubmodel = create_hub_model(savedir, config)
-    upload_hub_model(hubmodel, HF_API_TOKEN, config)
+    model_dir = minify_model_and_save(model, savedir, config)
+    hub_model = create_hub_model(model_dir, config)
+    upload_hub_model(hub_model, HF_API_TOKEN, config)
 
 
 if __name__ == "__main__":
