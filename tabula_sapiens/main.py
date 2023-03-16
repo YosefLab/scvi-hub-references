@@ -1,3 +1,4 @@
+"""Tabula Sapiens."""
 import json
 import os
 import pathlib
@@ -12,7 +13,6 @@ import requests
 import scanpy as sc
 import scvi
 from scvi.hub import HubMetadata, HubModel, HubModelCardHelper
-
 
 HF_API_TOKEN = os.environ["HF_API_TOKEN"]
 scvi.settings.seed = 2023
@@ -35,20 +35,24 @@ def load_config(config_path: str) -> dict:
 
 
 def get_urls(config: dict) -> Tuple[dict, dict]:
+    """Get the URLs for the training data and models."""
     req = requests.get(config["url"])
     adata_urls = {
-        ind['key'][:-19]:ind['links']['self']
-        for ind in req.json()['files'] if '.h5ad' in ind['key']
+        ind["key"][:-19]: ind["links"]["self"]
+        for ind in req.json()["files"]
+        if ".h5ad" in ind["key"]
     }
     model_urls = {
-        ind['key'][:-25]:ind['links']['self']
-        for ind in req.json()['files'] if not '.h5ad' in ind['key']
+        ind["key"][:-25]: ind["links"]["self"]
+        for ind in req.json()["files"]
+        if ".h5ad" not in ind["key"]
     }
 
     return adata_urls, model_urls
 
 
 def load_models(tissue: str, model_urls: dict, savedir: str, config: dict):
+    """Download the models and return the path to the models directory."""
     unzipped = pooch.retrieve(
         url=model_urls[tissue],
         fname=f"{config['model_fname']}_{tissue}",
@@ -60,11 +64,7 @@ def load_models(tissue: str, model_urls: dict, savedir: str, config: dict):
 
 
 def create_hub_model(
-    tissue: str,
-    model: str, 
-    adata_urls: dict, 
-    models_dir: str, 
-    config: dict
+    tissue: str, model: str, adata_urls: dict, models_dir: str, config: dict
 ) -> HubModel:
     """Create a HubModel object."""
     model_dir = os.path.join(models_dir, model)
@@ -113,20 +113,22 @@ def upload_hub_model(
 
 
 def get_retrain_urls(config: dict) -> dict:
+    """Get the URLs for the retraining data."""
     req = requests.get(config["retrain_adata_urls"])
     adata_urls = {
-        ind['key'][3:-14]:ind['links']['self'] 
-        for ind in req.json()['files']
+        ind["key"][3:-14]: ind["links"]["self"] for ind in req.json()["files"]
     }
     return adata_urls
 
 
 def load_adata(tissue: str, adata_urls: dict, savedir: str) -> ad.AnnData:
+    """Load the training data."""
     adata_path = os.path.join(savedir, f"{tissue}.h5ad")
     return sc.read(adata_path, backup_url=adata_urls[tissue])
 
 
 def preprocess_adata(adata: ad.AnnData, config: dict) -> ad.AnnData:
+    """Preprocess the training data."""
     sc.experimental.pp.highly_variable_genes(
         adata,
         batch_key=config["batch_key"],
@@ -136,18 +138,19 @@ def preprocess_adata(adata: ad.AnnData, config: dict) -> ad.AnnData:
 
 
 def retrain_scvi_and_minify(
-    adata: ad.AnnData, 
+    adata: ad.AnnData,
     savedir: str,
     config: dict,
     latent_qzm_key: str = "X_scvi_qzm",
-    latent_qzv_key: str = "X_scvi_qzv"
+    latent_qzv_key: str = "X_scvi_qzv",
 ) -> scvi.model.SCVI:
+    """Retrain scVI and minify the training data."""
     batch_key = config["batch_key"]
     labels_key = config["labels_key"]
     model_kwargs = config["model_kwargs"]
     train_kwargs = config["train_kwargs"]
     scvi_model_kwargs = model_kwargs["scvi"]
-    scanvi_model_kwargs = model_kwargs["scanvi"]
+    model_kwargs["scanvi"]
     scvi_train_kwargs = train_kwargs["scvi"]
 
     scvi.model.SCVI.setup_anndata(
@@ -158,9 +161,10 @@ def retrain_scvi_and_minify(
     model = scvi.model.SCVI(adata, **scvi_model_kwargs)
     model.train(**scvi_train_kwargs)
 
-    qzm, qzv = model.get_latent_representation(give_mean=False, return_dist=True)
-    model.adata.obsm[latent_qzm_key] = qzm
-    model.adata.obsm[latent_qzv_key] = qzv
+    (
+        model.adata.obsm[latent_qzm_key],
+        model.adata.obsm[latent_qzv_key],
+    ) = model.get_latent_representation(give_mean=False, return_dist=True)
     model.minify_adata(
         use_latent_qzm_key=latent_qzm_key, use_latent_qzv_key=latent_qzv_key
     )
@@ -177,17 +181,19 @@ def retrain_scanvi_and_minify(
     savedir: str,
     config: dict,
     latent_qzm_key: str = "X_scanvi_qzm",
-    latent_qzv_key: str = "X_scanvi_qzv"
+    latent_qzv_key: str = "X_scanvi_qzv",
 ):
+    """Retrain scANVI and minify the training data."""
     model_kwargs = config["model_kwargs"]["scanvi"]
     train_kwargs = config["train_kwargs"]["scanvi"]
 
     model = scvi.model.SCANVI.from_scvi_model(model, **model_kwargs)
     model.train(**train_kwargs)
 
-    qzm, qzv = model.get_latent_representation(give_mean=False, return_dist=True)
-    model.adata.obsm[latent_qzm_key] = qzm
-    model.adata.obsm[latent_qzv_key] = qzv
+    (
+        model.adata.obsm[latent_qzm_key],
+        model.adata.obsm[latent_qzv_key],
+    ) = model.get_latent_representation(give_mean=False, return_dist=True)
     model.minify_adata(
         use_latent_qzm_key=latent_qzm_key, use_latent_qzv_key=latent_qzv_key
     )
@@ -198,6 +204,7 @@ def retrain_scanvi_and_minify(
 
 
 def retrain_condscvi(adata: ad.AnnData, savedir: str, config: dict):
+    """Retrain CondSCVI."""
     labels_key = config["labels_key"]
     model_kwargs = config["model_kwargs"]["condscvi"]
     train_kwargs = config["train_kwargs"]["condscvi"]
@@ -212,6 +219,7 @@ def retrain_condscvi(adata: ad.AnnData, savedir: str, config: dict):
 
 
 def retrain_stereoscope(adata: ad.AnnData, savedir: str, config: dict):
+    """Retrain Stereoscope."""
     labels_key = config["labels_key"]
     model_kwargs = config["model_kwargs"]["stereoscope"]
     train_kwargs = config["train_kwargs"]["stereoscope"]
@@ -225,14 +233,17 @@ def retrain_stereoscope(adata: ad.AnnData, savedir: str, config: dict):
     model.save(model_dir, overwrite=True, save_anndata=True)
 
 
-def retrain_models(adata: ad.AnnData, tissue: str, models: list, savedir: str, config: dict) -> str:
+def retrain_models(
+    adata: ad.AnnData, tissue: str, models: list, savedir: str, config: dict
+) -> str:
+    """Retrain the models and save them to disk."""
     models_dir = os.path.join(savedir, tissue)
     make_parents(models_dir)
 
     scvi_model = None
     if "scvi" in models:
         scvi_model = retrain_scvi_and_minify(adata, models_dir, config)
-    
+
     if "scanvi" in models and scvi_model is not None:
         retrain_scanvi_and_minify(scvi_model, models_dir, config)
 
@@ -246,7 +257,8 @@ def retrain_models(adata: ad.AnnData, tissue: str, models: list, savedir: str, c
 
 
 def main():
-    config = load_config(snakemake.input[0])
+    """Run main."""
+    config = load_config(snakemake.input[0])  # noqa: F821
     retrain = config["retrain"]
     tissues = config["tissues"]
     models = config["models"]
@@ -266,7 +278,9 @@ def main():
 
         for model in models:
             try:
-                hub_model = create_hub_model(tissue, model, adata_urls, models_dir, config)
+                hub_model = create_hub_model(
+                    tissue, model, adata_urls, models_dir, config
+                )
                 upload_hub_model(hub_model, tissue, model, HF_API_TOKEN, config)
             except RuntimeError as e:
                 print(f"Error uploading {tissue} {model}: {e}")

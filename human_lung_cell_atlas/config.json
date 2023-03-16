@@ -1,22 +1,18 @@
 {
-    "legacy_model_url": "https://zenodo.org/record/6337966/files/HLCA_reference_model.zip",
-    "known_hash": "59a32ff9aeea386d1a19da3bad9e00cd88b993bd907b4d85b0ed511077178fd7",
-    "legacy_model_dir": "HLCA_reference_model_legacy",
-    "new_model_dir": "HLCA_reference_model",
-    "minified_model_dir": "HLCA_reference_model_minified",
-    "adata_url": "https://cellxgene.cziscience.com/e/066943a2-fdac-4b29-b348-40cede398e4e.cxg/",
-    "adata_fname": "HLCA_reference.h5ad",
-    "emb_url": "https://zenodo.org/record/6337966/files/HLCA_emb_and_metadata.h5ad",
-    "emb_fname": "HLCA_emb_and_metadata.h5ad",
-    "citation": "An integrated cell atlas of the human lung in health and disease. L Sikkema, D Strobl, L Zappia, E Madissoon, NS Markov, L Zaragosi, M Ansari, M Arguel, L Apperloo, C Bécavin, M Berg, E Chichelnitskiy, M Chung, A Collin, ACA Gay, B Hooshiar Kashani, M Jain, T Kapellos, TM Kole, C Mayr, M von Papen, L Peter, C Ramírez-Suástegui, J Schniering, C Taylor, T Walzthoeni, C Xu, LT Bui, C de Donno, L Dony, M Guo, AJ Gutierrez, L Heumos, N Huang, I Ibarra, N Jackson, P Kadur Lakshminarasimha Murthy, M Lotfollahi, T Tabib, C Talavera-Lopez, K Travaglini, A Wilbrey-Clark, KB Worlock, M Yoshida, Lung Biological Network Consortium, T Desai, O Eickelberg, C Falk, N Kaminski, M Krasnow, R Lafyatis, M Nikolíc, J Powell, J Rajagopal, O Rozenblatt-Rosen, MA Seibold, D Sheppard, D Shepherd, SA Teichmann, A Tsankov, J Whitsett, Y Xu, NE Banovich, P Barbry, TE Duong, KB Meyer, JA Kropski, D Pe’er, HB Schiller, PR Tata, JL Schultze, AV Misharin, MC Nawijn, MD Luecken, F Theis. bioRxiv 2022.03.10.483747; doi: https: //doi.org/10.1101/2022.03.10.483747",
-    "description": "The first integrated, universal transcriptomic reference of the human lung on the single-cell level. For more details, see https: //github.com/LungCellAtlas/HLCA.",
-    "tissues": [
-        "nose",
-        "respiratory airway",
-        "lung parenchyma"
-    ],
-    "data_modalities": ["rna"],
-    "license_info": "cc-by-4.0",
-    "training_code_url": "https://github.com/LungCellAtlas/HLCA_reproducibility",
-    "repo_name": "scvi-tools/human-lung-cell-atlas"
+  "legacy_model_url": "https://zenodo.org/record/6337966/files/HLCA_reference_model.zip",
+  "known_hash": "59a32ff9aeea386d1a19da3bad9e00cd88b993bd907b4d85b0ed511077178fd7",
+  "legacy_model_dir": "HLCA_reference_model_legacy",
+  "new_model_dir": "HLCA_reference_model",
+  "minified_model_dir": "HLCA_reference_model_minified",
+  "adata_url": "https://cellxgene.cziscience.com/e/066943a2-fdac-4b29-b348-40cede398e4e.cxg/",
+  "adata_fname": "HLCA_reference.h5ad",
+  "emb_url": "https://zenodo.org/record/6337966/files/HLCA_emb_and_metadata.h5ad",
+  "emb_fname": "HLCA_emb_and_metadata.h5ad",
+  "citation": "An integrated cell atlas of the human lung in health and disease. L Sikkema, D Strobl, L Zappia, E Madissoon, NS Markov, L Zaragosi, M Ansari, M Arguel, L Apperloo, C Bécavin, M Berg, E Chichelnitskiy, M Chung, A Collin, ACA Gay, B Hooshiar Kashani, M Jain, T Kapellos, TM Kole, C Mayr, M von Papen, L Peter, C Ramírez-Suástegui, J Schniering, C Taylor, T Walzthoeni, C Xu, LT Bui, C de Donno, L Dony, M Guo, AJ Gutierrez, L Heumos, N Huang, I Ibarra, N Jackson, P Kadur Lakshminarasimha Murthy, M Lotfollahi, T Tabib, C Talavera-Lopez, K Travaglini, A Wilbrey-Clark, KB Worlock, M Yoshida, Lung Biological Network Consortium, T Desai, O Eickelberg, C Falk, N Kaminski, M Krasnow, R Lafyatis, M Nikolíc, J Powell, J Rajagopal, O Rozenblatt-Rosen, MA Seibold, D Sheppard, D Shepherd, SA Teichmann, A Tsankov, J Whitsett, Y Xu, NE Banovich, P Barbry, TE Duong, KB Meyer, JA Kropski, D Pe’er, HB Schiller, PR Tata, JL Schultze, AV Misharin, MC Nawijn, MD Luecken, F Theis. bioRxiv 2022.03.10.483747; doi: https: //doi.org/10.1101/2022.03.10.483747",
+  "description": "The first integrated, universal transcriptomic reference of the human lung on the single-cell level. For more details, see https: //github.com/LungCellAtlas/HLCA.",
+  "tissues": ["nose", "respiratory airway", "lung parenchyma"],
+  "data_modalities": ["rna"],
+  "license_info": "cc-by-4.0",
+  "training_code_url": "https://github.com/LungCellAtlas/HLCA_reproducibility",
+  "repo_name": "scvi-tools/human-lung-cell-atlas"
 }

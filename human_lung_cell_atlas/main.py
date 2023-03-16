@@ -1,3 +1,4 @@
+"""Human Lung Cell Atlas."""
 import json
 import os
 import pathlib
@@ -32,16 +33,17 @@ def load_config(config_path: str) -> dict:
 
 
 def load_adata(savedir: str, config: dict) -> ad.AnnData:
+    """Load the dataset."""
     adata = scvi.data.cellxgene(
         config["adata_url"], filename=config["adata_fname"], save_path=savedir
     )
     return adata
 
 
-def preprocess_adata(adata: ad.AnnData, model_dir: str, config: dict) -> ad.AnnData:
+def preprocess_adata(adata: ad.AnnData, model_dir: str) -> ad.AnnData:
     """Minimal preprocessing for the model."""
     adata.X = adata.raw.X
-    adata = adata[:, adata.var.highly_variable == True].copy()
+    adata = adata[:, adata.var.highly_variable == True].copy()  # noqa: E712
     scvi.model.base.ArchesMixin.prepare_query_anndata(adata, model_dir)
 
     return adata
@@ -50,16 +52,18 @@ def preprocess_adata(adata: ad.AnnData, model_dir: str, config: dict) -> ad.AnnD
 def postprocess_adata(adata: ad.AnnData) -> ad.AnnData:
     """Postprocessing so the AnnData types are amenable to saving."""
     for k in ["feature_name", "feature_reference", "feature_biotype"]:
-        setattr(adata.var, k, getattr(adata.var, k).cat.add_categories("Unknown"))
-    
+        new = getattr(adata.var, k).cat.add_categories("Unknown")
+        setattr(adata.var, k, new)
+
     adata.var.fillna("Unknown", inplace=True)
     obj_cols = adata.var.select_dtypes(include="object").columns
     adata.var.loc[:, obj_cols] = adata.var.loc[:, obj_cols].astype("str")
-    
+
     return adata
 
 
 def convert_legacy_model(savedir: str, config: dict) -> str:
+    """Convert the legacy model to the new format."""
     unzipped = pooch.retrieve(
         url=config["legacy_model_url"],
         fname=config["legacy_model_dir"],
@@ -71,11 +75,12 @@ def convert_legacy_model(savedir: str, config: dict) -> str:
     new_model_dir = os.path.join(savedir, config["new_model_dir"])
     make_parents(new_model_dir)
     scvi.model.SCANVI.convert_legacy_save(legacy_model_dir, new_model_dir)
-    
+
     return new_model_dir
 
 
 def load_model(model_dir: str, adata: ad.AnnData) -> scvi.model.SCANVI:
+    """Load the model."""
     return scvi.model.SCANVI.load(model_dir, adata=adata)
 
 
@@ -86,6 +91,7 @@ def minify_model_and_save(
     latent_qzm_key: str = "X_scanvi_qzm",
     latent_qzv_key: str = "X_scanvi_qzv",
 ) -> str:
+    """Minify the model and save it."""
     _, qzv = model.get_latent_representation(give_mean=False, return_dist=True)
 
     # use pre-computed qzm from HLCA team
@@ -107,6 +113,7 @@ def minify_model_and_save(
 
 
 def create_hub_model(model_dir: str, config: str) -> HubModel:
+    """Create a HubModel object."""
     metadata = HubMetadata.from_dir(
         model_dir,
         anndata_version=ad.__version__,
@@ -130,7 +137,8 @@ def create_hub_model(model_dir: str, config: str) -> HubModel:
     return HubModel(model_dir, metadata=metadata, model_card=card)
 
 
-def upload_hub_model(hub_model: HubModel, repo_token: str, config: dict) -> None:
+def upload_hub_model(hub_model: HubModel, repo_token: str, config: dict):
+    """Upload the model to the HuggingFace Hub."""
     try:
         hub_model.push_to_huggingface_hub(
             repo_name=config["repo_name"],
@@ -146,7 +154,8 @@ def upload_hub_model(hub_model: HubModel, repo_token: str, config: dict) -> None
 
 
 def main():
-    config = load_config(snakemake.input[0])
+    """Run main."""
+    config = load_config(snakemake.input[0])  # noqa: F821
     savedir = tempfile.TemporaryDirectory().name
 
     model_dir = convert_legacy_model(savedir, config)
