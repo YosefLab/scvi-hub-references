@@ -51,14 +51,14 @@ def get_urls(config: dict) -> Tuple[dict, dict]:
     return adata_urls, model_urls
 
 
-def load_models(tissue: str, model_urls: dict, savedir: str, config: dict):
+def load_models(tissue: str, model_urls: dict, save_dir: str, config: dict):
     """Download the models and return the path to the models directory."""
     unzipped = pooch.retrieve(
         url=model_urls[tissue],
         fname=f"{config['model_fname']}_{tissue}",
         known_hash=config["known_hash"],
         processor=pooch.Untar(),
-        path=savedir,
+        path=save_dir,
     )
     return Path(unzipped[0]).parent.parent
 
@@ -121,9 +121,9 @@ def get_retrain_urls(config: dict) -> dict:
     return adata_urls
 
 
-def load_adata(tissue: str, adata_urls: dict, savedir: str) -> ad.AnnData:
+def load_adata(tissue: str, adata_urls: dict, save_dir: str) -> ad.AnnData:
     """Load the training data."""
-    adata_path = os.path.join(savedir, f"{tissue}.h5ad")
+    adata_path = os.path.join(save_dir, f"{tissue}.h5ad")
     return sc.read(adata_path, backup_url=adata_urls[tissue])
 
 
@@ -139,7 +139,7 @@ def preprocess_adata(adata: ad.AnnData, config: dict) -> ad.AnnData:
 
 def retrain_scvi_and_minify(
     adata: ad.AnnData,
-    savedir: str,
+    save_dir: str,
     config: dict,
     latent_qzm_key: str = "X_scvi_qzm",
     latent_qzv_key: str = "X_scvi_qzv",
@@ -169,7 +169,7 @@ def retrain_scvi_and_minify(
         use_latent_qzm_key=latent_qzm_key, use_latent_qzv_key=latent_qzv_key
     )
 
-    model_dir = os.path.join(savedir, "scvi")
+    model_dir = os.path.join(save_dir, "scvi")
     make_parents(model_dir)
     model.save(model_dir, overwrite=True, save_anndata=True)
 
@@ -178,7 +178,7 @@ def retrain_scvi_and_minify(
 
 def retrain_scanvi_and_minify(
     model: scvi.model.SCVI,
-    savedir: str,
+    save_dir: str,
     config: dict,
     latent_qzm_key: str = "X_scanvi_qzm",
     latent_qzv_key: str = "X_scanvi_qzv",
@@ -198,12 +198,12 @@ def retrain_scanvi_and_minify(
         use_latent_qzm_key=latent_qzm_key, use_latent_qzv_key=latent_qzv_key
     )
 
-    model_dir = os.path.join(savedir, "scanvi")
+    model_dir = os.path.join(save_dir, "scanvi")
     make_parents(model_dir)
     model.save(model_dir, overwrite=True, save_anndata=True)
 
 
-def retrain_condscvi(adata: ad.AnnData, savedir: str, config: dict):
+def retrain_condscvi(adata: ad.AnnData, save_dir: str, config: dict):
     """Retrain CondSCVI."""
     labels_key = config["labels_key"]
     model_kwargs = config["model_kwargs"]["condscvi"]
@@ -213,12 +213,12 @@ def retrain_condscvi(adata: ad.AnnData, savedir: str, config: dict):
     model = scvi.model.CondSCVI(adata, **model_kwargs)
     model.train(**train_kwargs)
 
-    model_dir = os.path.join(savedir, "condscvi")
+    model_dir = os.path.join(save_dir, "condscvi")
     make_parents(model_dir)
     model.save(model_dir, overwrite=True, save_anndata=True)
 
 
-def retrain_stereoscope(adata: ad.AnnData, savedir: str, config: dict):
+def retrain_stereoscope(adata: ad.AnnData, save_dir: str, config: dict):
     """Retrain Stereoscope."""
     labels_key = config["labels_key"]
     model_kwargs = config["model_kwargs"]["stereoscope"]
@@ -228,16 +228,16 @@ def retrain_stereoscope(adata: ad.AnnData, savedir: str, config: dict):
     model = scvi.external.RNAStereoscope(adata, **model_kwargs)
     model.train(**train_kwargs)
 
-    model_dir = os.path.join(savedir, "stereoscope")
+    model_dir = os.path.join(save_dir, "stereoscope")
     make_parents(model_dir)
     model.save(model_dir, overwrite=True, save_anndata=True)
 
 
 def retrain_models(
-    adata: ad.AnnData, tissue: str, models: list, savedir: str, config: dict
+    adata: ad.AnnData, tissue: str, models: list, save_dir: str, config: dict
 ) -> str:
     """Retrain the models and save them to disk."""
-    models_dir = os.path.join(savedir, tissue)
+    models_dir = os.path.join(save_dir, tissue)
     make_parents(models_dir)
 
     scvi_model = None
@@ -262,7 +262,7 @@ def main():
     retrain = config["retrain"]
     tissues = config["tissues"]
     models = config["models"]
-    savedir = tempfile.TemporaryDirectory().name
+    save_dir = tempfile.TemporaryDirectory().name
 
     adata_urls, model_urls = get_urls(config)
     if retrain:
@@ -270,11 +270,11 @@ def main():
 
     for tissue in tissues:
         if retrain:
-            adata = load_adata(tissue, retrain_adata_urls, savedir)
+            adata = load_adata(tissue, retrain_adata_urls, save_dir)
             adata = preprocess_adata(adata, config)
-            models_dir = retrain_models(adata, tissue, models, savedir, config)
+            models_dir = retrain_models(adata, tissue, models, save_dir, config)
         else:
-            models_dir = load_models(tissue, model_urls, savedir, config)
+            models_dir = load_models(tissue, model_urls, save_dir, config)
 
         for model in models:
             try:

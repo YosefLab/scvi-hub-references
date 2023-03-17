@@ -32,10 +32,10 @@ def load_config(config_path: str) -> dict:
     return config
 
 
-def load_adata(savedir: str, config: dict) -> ad.AnnData:
+def load_adata(save_dir: str, config: dict) -> ad.AnnData:
     """Load the dataset."""
     adata = scvi.data.cellxgene(
-        config["adata_url"], filename=config["adata_fname"], save_path=savedir
+        config["adata_url"], filename=config["adata_fname"], save_path=save_dir
     )
     return adata
 
@@ -62,19 +62,21 @@ def postprocess_adata(adata: ad.AnnData) -> ad.AnnData:
     return adata
 
 
-def convert_legacy_model(savedir: str, config: dict) -> str:
+def convert_legacy_model(save_dir: str, config: dict) -> str:
     """Convert the legacy model to the new format."""
     unzipped = pooch.retrieve(
         url=config["legacy_model_url"],
         fname=config["legacy_model_dir"],
         known_hash=config["known_hash"],
         processor=pooch.Unzip(),
-        path=savedir,
+        path=save_dir,
     )
     legacy_model_dir = Path(unzipped[0]).parent
-    new_model_dir = os.path.join(savedir, config["new_model_dir"])
+    new_model_dir = os.path.join(save_dir, config["new_model_dir"])
     make_parents(new_model_dir)
-    scvi.model.SCANVI.convert_legacy_save(legacy_model_dir, new_model_dir)
+    scvi.model.SCANVI.convert_legacy_save(
+        legacy_model_dir, new_model_dir, overwrite=True
+    )
 
     return new_model_dir
 
@@ -86,7 +88,7 @@ def load_model(model_dir: str, adata: ad.AnnData) -> scvi.model.SCANVI:
 
 def minify_model_and_save(
     model: scvi.model.SCANVI,
-    savedir: str,
+    save_dir: str,
     config: dict,
     latent_qzm_key: str = "X_scanvi_qzm",
     latent_qzv_key: str = "X_scanvi_qzv",
@@ -95,7 +97,7 @@ def minify_model_and_save(
     _, qzv = model.get_latent_representation(give_mean=False, return_dist=True)
 
     # use pre-computed qzm from HLCA team
-    emb_path = os.path.join(savedir, config["emb_fname"])
+    emb_path = os.path.join(save_dir, config["emb_fname"])
     adata = sc.read(emb_path, backup_url=config["emb_url"])
     qzm = adata.X
 
@@ -105,7 +107,7 @@ def minify_model_and_save(
         use_latent_qzm_key=latent_qzm_key, use_latent_qzv_key=latent_qzv_key
     )
 
-    model_dir = os.path.join(savedir, config["minified_model_dir"])
+    model_dir = os.path.join(save_dir, config["minified_model_dir"])
     make_parents(model_dir)
     model.save(model_dir, overwrite=True, save_anndata=True)
 
@@ -156,15 +158,15 @@ def upload_hub_model(hub_model: HubModel, repo_token: str, config: dict):
 def main():
     """Run main."""
     config = load_config(snakemake.input[0])  # noqa: F821
-    savedir = tempfile.TemporaryDirectory().name
+    save_dir = tempfile.TemporaryDirectory().name
 
-    model_dir = convert_legacy_model(savedir, config)
-    adata = load_adata(savedir, config)
+    model_dir = convert_legacy_model(save_dir, config)
+    adata = load_adata(save_dir, config)
     adata = preprocess_adata(adata, model_dir, config)
     model = load_model(model_dir, adata)
 
     model.adata = postprocess_adata(model.adata)
-    model_dir = minify_model_and_save(model, savedir, config)
+    model_dir = minify_model_and_save(model, save_dir, config)
 
     hub_model = create_hub_model(model_dir, config)
     upload_hub_model(hub_model, HF_API_TOKEN, config)

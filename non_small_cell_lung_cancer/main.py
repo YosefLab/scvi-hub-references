@@ -32,14 +32,14 @@ def load_config(config_path: str) -> dict:
     return config
 
 
-def load_model(savedir: str, config: dict) -> scvi.model.SCANVI:
+def load_model(save_dir: str, config: dict) -> scvi.model.SCANVI:
     """Load the model and dataset."""
     unzipped = pooch.retrieve(
         url=config["model_url"],
         fname=config["model_save_dir"],
         known_hash=config["known_hash"],
         processor=pooch.Untar(),
-        path=savedir,
+        path=save_dir,
     )[0]
     base_path = Path(unzipped).parent
     model_path = os.path.join(base_path, config["model_dir"])
@@ -53,7 +53,7 @@ def load_model(savedir: str, config: dict) -> scvi.model.SCANVI:
 
 def minify_model_and_save(
     model: scvi.model.SCANVI,
-    savedir: str,
+    save_dir: str,
     config: dict,
     latent_qzm_key: str = "latent_qzm",
     latent_qzv_key: str = "latent_qzv",
@@ -67,7 +67,7 @@ def minify_model_and_save(
         use_latent_qzm_key=latent_qzm_key, use_latent_qzv_key=latent_qzv_key
     )
 
-    model_dir = os.path.join(savedir, config["minified_model_dir"])
+    model_dir = os.path.join(save_dir, config["minified_model_dir"])
     make_parents(model_dir)
     model.save(model_dir, overwrite=True)
 
@@ -119,10 +119,10 @@ def upload_hub_model(hub_model: HubModel, repo_token: str, config: dict):
 def main():
     """Run main."""
     config = load_config(snakemake.input[0])  # noqa: F821
-    savedir = tempfile.TemporaryDirectory().name
+    save_dir = tempfile.TemporaryDirectory().name
 
-    model = load_model(savedir, config)
-    model_dir = minify_model_and_save(model, savedir, config)
+    model = load_model(save_dir, config)
+    model_dir = minify_model_and_save(model, save_dir, config)
     hub_model = create_hub_model(model_dir, config)
     upload_hub_model(hub_model, HF_API_TOKEN, config)
 

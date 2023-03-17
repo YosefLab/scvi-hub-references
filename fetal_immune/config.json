@@ -1,0 +1,26 @@
+{
+    "model_url": "https://drive.google.com/drive/folders/11VQEDHMUJtuKZ5iyDIw9vrzTdbHvphGk?usp=share_link",
+    "known_hash": "",
+    "legacy_model_dir": "fetal_immune_legacy",
+    "new_model_dir": "fetal_immune",
+    "minified_model_dir": "fetal_immune_minified",
+    "adata_url": "https://cellgeni.cog.sanger.ac.uk/developmentcellatlas/fetal-immune/PAN.A01.v01.raw_count.20210429.HSC_IMMUNE.embedding.h5ad",
+    "adata_fname": "adata.h5ad",
+    "citation": "Mapping the developing human immune system across organs. C Suo, E Dann, I Goh, L Jardine, V Kleshchevnikov, JE Park, RA Botting, E Stephenson, J Engelbert, ZK Tuong, K Polanski, N Yayon, C Xu, O Suchanek, R Elmentaite, C Dominguez Conde, P He, S Pritchard, M Miah, C Moldovan, AS Steemers, P Mazin, M Prete, D Horsfall, JC Marioni, MR Clatworthy, M Haniffa, SA Teichmann. Science. 2022; 376 (6597). https://doi.org/10.1126/science.abo0510.",
+    "description": "",
+    "tissues": [
+        "yolk sac",
+        "fetal liver",
+        "fetal bone marrow",
+        "fetal thymus",
+        "fetal spleen",
+        "fetal mesenteric lymph node",
+        "fetal gut",
+        "fetal skin",
+        "fetal kidney"
+    ],
+    "data_modalities": ["rna"],
+    "license_info": "cc-by-4.0",
+    "training_code_url": "https://github.com/Teichlab/Pan_fetal_immune",
+    "repo_name": "scvi-tools/fetal-immune"
+}
