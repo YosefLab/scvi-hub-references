@@ -1,0 +1,74 @@
+envvars:
+    "HF_API_TOKEN"
+
+rule allen_brain:
+    input:
+        "../conf/allen_brain.json"
+    log:
+        "../logs/allen_brain_stderr.log",
+        "../logs/allen_brain_stdout.log",
+    conda:
+        "../envs/models.yaml"
+    threads: 16
+    script:
+        "allen_brain.py"
+
+rule fetal_immune:
+    input:
+        "../conf/fetal_immune.json"
+    log:
+        "../logs/fetal_immune_stderr.log",
+        "../logs/fetal_immune_stdout.log",
+    conda:
+        "../envs/models.yaml"
+    threads: 16
+    script:
+        "fetal_immune.py"
+
+rule human_lung_cell_atlas:
+    input:
+        "../conf/human_lung_cell_atlas.json"
+    log:
+        "../logs/human_lung_cell_atlas_stderr.log",
+        "../logs/human_lung_cell_atlas_stdout.log",
+    conda:
+        "../envs/models.yaml"
+    threads: 16
+    script:
+        "human_lung_cell_atlas.py"
+
+rule non_small_cell_lung_cancer:
+    input:
+        "../conf/non_small_cell_lung_cancer.json"
+    log:
+        "../logs/non_small_cell_lung_cancer_stderr.log",
+        "../logs/non_small_cell_lung_cancer_stdout.log",
+    conda:
+        "../envs/models.yaml"
+    threads: 16
+    script:
+        "non_small_cell_lung_cancer.py"
+
+rule pbmc_citeseq:
+    input:
+        "../conf/pbmc_citeseq.json"
+    log:
+        "../logs/pbmc_citeseq_stderr.log",
+        "../logs/pbmc_citeseq_stdout.log",
+    conda:
+        "../envs/models.yaml"
+    threads: 16
+    script:
+        "pbmc_citeseq.py"
+
+rule tabula_sapiens:
+    input:
+        "../conf/tabula_sapiens.json"
+    log:
+        "../logs/tabula_sapiens_stderr.log",
+        "../logs/tabula_sapiens_stdout.log",
+    conda:
+        "../envs/models.yaml"
+    threads: 16
+    script:
+        "tabula_sapiens.py"

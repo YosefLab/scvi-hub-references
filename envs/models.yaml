@@ -1,4 +1,4 @@
-name: run-models
+name: models
 channels:
   - conda-forge
   - bioconda
