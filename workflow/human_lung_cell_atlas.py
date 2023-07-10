@@ -1,11 +1,8 @@
 """Human Lung Cell Atlas."""
-import os
 import sys
 
 import anndata as ad
-import numpy as np
 import pooch
-import scanpy as sc
 import scvi
 
 from utils import (
@@ -26,7 +23,14 @@ sys.stdout = open(snakemake.log[1], "w")  # noqa: F821
 def preprocess_adata(adata: ad.AnnData, model_dir: str) -> ad.AnnData:
     """Minimal preprocessing for the model."""
     adata.X = adata.raw.X
-    adata = adata[:, adata.var.highly_variable == True].copy()  # noqa: E712
+    _, mvars, _, _ = scvi.model.base._utils._load_saved_files(model_dir, load_adata=False)
+    adata = adata[:, adata.var.index.isin(mvars)].copy()  # noqa: E712
+    
+    # get rid of some var columns that we dont need -- will make later processing easier
+    del adata.var["feature_is_filtered"]
+    del adata.var["feature_reference"]
+    del adata.var["feature_biotype"]
+
     scvi.model.base.ArchesMixin.prepare_query_anndata(adata, model_dir)
 
     return adata
@@ -34,13 +38,12 @@ def preprocess_adata(adata: ad.AnnData, model_dir: str) -> ad.AnnData:
 
 def postprocess_adata(adata: ad.AnnData) -> ad.AnnData:
     """Postprocessing so the AnnData types are amenable to saving."""
-    for k in ["feature_name", "feature_reference", "feature_biotype"]:
-        new = getattr(adata.var, k).cat.add_categories("Unknown")
-        setattr(adata.var, k, new)
-
-    adata.var.fillna("Unknown", inplace=True)
-    obj_cols = adata.var.select_dtypes(include="object").columns
-    adata.var.loc[:, obj_cols] = adata.var.loc[:, obj_cols].astype("str")
+    # add feature_names for the padded genes
+    gene_ids = ['ENSG00000253701', 'ENSG00000269936', 'ENSG00000274961', 'ENSG00000279576']
+    feature_names = ['AL928768.3', 'RP11-394O4.5', 'RP3-492J12.2', 'AP000769.1']
+    adata.var["feature_name"] = adata.var["feature_name"].cat.add_categories(feature_names)
+    for g,f in zip(gene_ids, feature_names):
+        adata.var.loc[g, "feature_name"] = f
 
     return adata
 
@@ -69,9 +72,11 @@ def main():
     model = scvi.model.SCANVI.load(model_dir, adata=adata)
 
     model.adata = postprocess_adata(model.adata)
-    qzm = load_adata(
+    adata_emb = load_adata(
         url=config["emb_url"], fname=config["emb_fname"], save_dir=save_dir
-    ).X
+    )
+    adata_emb = adata_emb[adata_emb.obs["core_or_extension"] == "core"].copy()
+    qzm = adata_emb.X
     model_dir = minify_model_and_save(
         model=model,
         save_dir=save_dir,
