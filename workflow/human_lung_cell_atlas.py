@@ -4,17 +4,9 @@ import sys
 import anndata as ad
 import pooch
 import scvi
-
-from utils import (
-    HF_API_TOKEN,
-    create_hub_model,
-    get_temp_dir,
-    load_adata,
-    load_config, 
-    minify_model_and_save,
-    retrieve_and_convert_legacy_model,
-    upload_hub_model,
-)
+from utils import (HF_API_TOKEN, create_hub_model, get_temp_dir, load_adata,
+                   load_config, minify_model_and_save,
+                   retrieve_and_convert_legacy_model, upload_hub_model)
 
 sys.stderr = open(snakemake.log[0], "w")  # noqa: F821
 sys.stdout = open(snakemake.log[1], "w")  # noqa: F821
@@ -23,10 +15,13 @@ sys.stdout = open(snakemake.log[1], "w")  # noqa: F821
 def preprocess_adata(adata: ad.AnnData, model_dir: str) -> ad.AnnData:
     """Minimal preprocessing for the model."""
     adata.X = adata.raw.X
-    _, mvars, _, _ = scvi.model.base._utils._load_saved_files(model_dir, load_adata=False)
-    adata = adata[:, adata.var.index.isin(mvars)].copy()  # noqa: E712
-    
-    # get rid of some var columns that we dont need -- will make later processing easier
+    _, mvars, _, _ = scvi.model.base._utils._load_saved_files(
+        model_dir, load_adata=False
+    )
+    adata = adata[:, adata.var.index.isin(mvars)].copy()
+
+    # get rid of some var columns that we dont need
+    # -- will make later processing easier
     del adata.var["feature_is_filtered"]
     del adata.var["feature_reference"]
     del adata.var["feature_biotype"]
@@ -39,10 +34,16 @@ def preprocess_adata(adata: ad.AnnData, model_dir: str) -> ad.AnnData:
 def postprocess_adata(adata: ad.AnnData) -> ad.AnnData:
     """Postprocessing so the AnnData types are amenable to saving."""
     # add feature_names for the padded genes
-    gene_ids = ['ENSG00000253701', 'ENSG00000269936', 'ENSG00000274961', 'ENSG00000279576']
-    feature_names = ['AL928768.3', 'RP11-394O4.5', 'RP3-492J12.2', 'AP000769.1']
-    adata.var["feature_name"] = adata.var["feature_name"].cat.add_categories(feature_names)
-    for g,f in zip(gene_ids, feature_names):
+    gene_ids = [
+        "ENSG00000253701",
+        "ENSG00000269936",
+        "ENSG00000274961",
+        "ENSG00000279576",
+    ]
+    feat_names = ["AL928768.3", "RP11-394O4.5", "RP3-492J12.2", "AP000769.1"]
+    c = adata.var["feature_name"].cat.add_categories(feat_names)
+    adata.var["feature_name"] = c
+    for g, f in zip(gene_ids, feat_names):
         adata.var.loc[g, "feature_name"] = f
 
     return adata
@@ -63,9 +64,9 @@ def main():
         processor=pooch.Unzip(),
     )
     adata = load_adata(
-        url=config["adata_url"], 
-        fname=config["adata_fname"], 
-        save_dir=save_dir, 
+        url=config["adata_url"],
+        fname=config["adata_fname"],
+        save_dir=save_dir,
         cellxgene=True,
     )
     adata = preprocess_adata(adata, model_dir)
@@ -76,11 +77,11 @@ def main():
         url=config["emb_url"], fname=config["emb_fname"], save_dir=save_dir
     )
     adata_emb = adata_emb[adata_emb.obs["core_or_extension"] == "core"].copy()
-    qzm = adata_emb.X
+    qzm = adata_emb[model.adata.obs.index].copy().X
     model_dir = minify_model_and_save(
         model=model,
         save_dir=save_dir,
-        model_dir= config["minified_model_dir"], 
+        model_dir=config["minified_model_dir"],
         qzm=qzm,
     )
 
